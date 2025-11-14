@@ -14,11 +14,8 @@ import { IconBrandFacebook, IconBrandLinkedin, IconBrandInstagram, IconBrandWhat
 import { FaXTwitter } from "react-icons/fa6";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import ReCAPTCHA from "react-google-recaptcha";
 import ThankYouPage from "@/components/ThankYou";
-
-const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6Ld-MQQsAAAAAJRroGTLROzcwYvroQBdREUK4qYd";
-const isRecaptchaEnabled = RECAPTCHA_SITE_KEY.length > 0;
+import AlphabeticCaptcha from "@/components/AlphabeticCaptcha";
 
 const contactFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -30,9 +27,9 @@ const contactFormSchema = z.object({
   message: z.string().optional(),
   sourcePage: z.string().optional(),
   selectedPlan: z.string().optional(),
-  captcha: isRecaptchaEnabled 
-    ? z.string().min(1, "Please complete the reCAPTCHA verification")
-    : z.string().optional(),
+  captchaValid: z.boolean().refine((val) => val === true, {
+    message: "Please complete the captcha verification",
+  }),
 });
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
@@ -105,7 +102,7 @@ const ContactSection = () => {
   const [showCountryDropdown, setShowCountryDropdown] = useState<boolean>(false);
   const [filteredCountries, setFilteredCountries] = useState<string[]>([]);
   const countryDropdownRef = useRef<HTMLDivElement>(null);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
+  const [captchaValid, setCaptchaValid] = useState(false);
   const navigate = useNavigate();
   const { trackEvent } = usePostHog();
 
@@ -121,7 +118,7 @@ const ContactSection = () => {
       message: "",
       sourcePage: "",
       selectedPlan: "",
-      captcha: "",
+      captchaValid: false,
     },
   });
 
@@ -171,53 +168,46 @@ const ContactSection = () => {
   }, []);
 
   const onSubmit = async (data: ContactFormData) => {
-    if (!data.captcha) {
-      toast.error("Please complete the reCAPTCHA verification.");
+    if (!data.captchaValid) {
+      toast.error("Please complete the captcha verification.");
       trackEvent('contact_form_validation_error', { error: 'missing_captcha' });
       return;
     }
     try {
-      console.log('Submitting form data:', { ...data, captcha: '[REDACTED]' });
+      console.log('Submitting form data:', data);
       const response = await fetch("https://www.cybaemtech.com/cybaem_contact/contact_v2.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, captcha: undefined }),
+        body: JSON.stringify({ ...data, captchaValid: undefined }),
       });
       
       console.log('Form submission response:', response.status, response.statusText);
       
-      // Track successful form submission
       trackEvent('contact_form_submitted', {
         source: data.sourcePage,
         country: data.country,
         selected_plan: data.selectedPlan,
       });
       
-      // Clear the selected plan from sessionStorage after successful submission
       sessionStorage.removeItem("selectedPlan");
-      // Show Thank You page regardless of response for consistent UX
       form.reset();
-      recaptchaRef.current?.reset();
+      setCaptchaValid(false);
       navigate("/thankyou", { replace: true });
       setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
     } catch (error) {
       console.error('Form submission error:', error);
       
-      // Track form submission error
       trackEvent('contact_form_error', {
         error: error instanceof Error ? error.message : 'Unknown error',
         source: data.sourcePage,
       });
       
-      // Show error toast to user
       toast.error("Failed to submit form. Please try again or contact support.");
       
-      // Clear the selected plan from sessionStorage
       sessionStorage.removeItem("selectedPlan");
       form.reset();
-      recaptchaRef.current?.reset();
+      setCaptchaValid(false);
       
-      // For now, still navigate to thank you page
       navigate("/thankyou", { replace: true });
       setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
     }
@@ -385,34 +375,31 @@ const ContactSection = () => {
                       )}
                     />
                   </div>
-                  {isRecaptchaEnabled && (
-                    <FormField
-                      control={form.control}
-                      name="captcha"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white flex items-center gap-2">
-                            <Shield className="w-4 h-4 text-primary" />
-                            Security Verification *
-                          </FormLabel>
-                          <FormControl>
-                            <ReCAPTCHA
-                              ref={recaptchaRef}
-                              sitekey={RECAPTCHA_SITE_KEY}
-                              onChange={(token) => {
-                                field.onChange(token || "");
-                              }}
-                              onExpired={() => {
-                                field.onChange("");
-                              }}
-                              theme="dark"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="captchaValid"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-primary" />
+                          Security Verification *
+                        </FormLabel>
+                        <FormControl>
+                          <AlphabeticCaptcha
+                            onChange={(isValid) => {
+                              field.onChange(isValid);
+                              setCaptchaValid(isValid);
+                            }}
+                            onReset={() => {
+                              field.onChange(false);
+                              setCaptchaValid(false);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-500/90 text-white font-bold py-3 text-base rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl shadow-primary/20"

@@ -18,9 +18,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ThankYouPage from "@/components/ThankYou";
 import { toast } from "sonner";
-import ReCAPTCHA from "react-google-recaptcha";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CheckCircle, Shield, Users, Award, HeadphonesIcon } from "lucide-react";
+import AlphabeticCaptcha from "@/components/AlphabeticCaptcha";
 
 const contactFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -32,7 +32,9 @@ const contactFormSchema = z.object({
   message: z.string().optional(),
   sourcePage: z.string().optional(),
   selectedPlan: z.string().optional(),
-  captcha: z.string().min(1, "Please complete the reCAPTCHA verification"),
+  captchaValid: z.boolean().refine((val) => val === true, {
+    message: "Please complete the captcha verification",
+  }),
 });
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
@@ -164,7 +166,7 @@ const Contact = () => {
   const [showCountryDropdown, setShowCountryDropdown] = useState<boolean>(false);
   const [filteredCountries, setFilteredCountries] = useState<string[]>([]);
   const countryDropdownRef = useRef<HTMLDivElement>(null);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
+  const [captchaValid, setCaptchaValid] = useState(false);
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
@@ -178,7 +180,7 @@ const Contact = () => {
       message: "",
       sourcePage: "",
       selectedPlan: "",
-      captcha: "",
+      captchaValid: false,
     },
   });
 
@@ -229,36 +231,24 @@ const Contact = () => {
   }, []);
 
   const onSubmit = async (data: ContactFormData) => {
-    // Verify reCAPTCHA
-    if (!data.captcha) {
-      alert("Please complete the reCAPTCHA verification.");
+    if (!data.captchaValid) {
+      alert("Please complete the captcha verification.");
       return;
     }
 
     try {
-      // Simulate form submission for demo purposes
-      // In production, replace this with actual API call
       console.log("Form submitted:", data);
 
-      setShowThankYou(true);
-
-      // Scroll to top of ThankYou page after rendering
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }, 100);
-
-      
       const response = await fetch("https://www.cybaemtech.com/cybaem_contact/contact_v2.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          captcha: undefined, // Don't send captcha to server
+          captchaValid: undefined,
         }),
       });
 
       if (response.ok) {
-        // Clear the selected plan from sessionStorage after successful submission
         sessionStorage.removeItem("selectedPlan");
         setShowThankYou(true);
         setTimeout(() => {
@@ -277,9 +267,8 @@ const Contact = () => {
   const handleBackToForm = () => {
     setShowThankYou(false);
     form.reset();
-    // Clear selected plan when going back to form
     sessionStorage.removeItem("selectedPlan");
-    recaptchaRef.current?.reset();
+    setCaptchaValid(false);
   };
 
   // Show thank you page if form was successfully submitted
@@ -563,7 +552,7 @@ const Contact = () => {
                       </div>
                     <FormField
                       control={form.control}
-                      name="captcha"
+                      name="captchaValid"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-white flex items-center gap-2">
@@ -571,16 +560,15 @@ const Contact = () => {
                             Security Verification *
                           </FormLabel>
                           <FormControl>
-                            <ReCAPTCHA
-                              ref={recaptchaRef}
-                              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6Ld-MQQsAAAAAJRroGTLROzcwYvroQBdREUK4qYd"}
-                              onChange={(token) => {
-                                field.onChange(token || "");
+                            <AlphabeticCaptcha
+                              onChange={(isValid) => {
+                                field.onChange(isValid);
+                                setCaptchaValid(isValid);
                               }}
-                              onExpired={() => {
-                                field.onChange("");
+                              onReset={() => {
+                                field.onChange(false);
+                                setCaptchaValid(false);
                               }}
-                              theme="dark"
                             />
                           </FormControl>
                           <FormMessage />
