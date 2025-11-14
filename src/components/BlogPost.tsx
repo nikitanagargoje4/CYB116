@@ -182,6 +182,21 @@ const BlogPost = () => {
     }
   }, [post]);
 
+  // Add IDs to h2 headings in the rendered content for TOC navigation
+  useEffect(() => {
+    if (toc.length > 0) {
+      const contentDiv = document.querySelector('.prose');
+      if (contentDiv) {
+        const headings = contentDiv.querySelectorAll('h2');
+        headings.forEach((heading, index) => {
+          if (toc[index]) {
+            heading.id = toc[index].id;
+          }
+        });
+      }
+    }
+  }, [toc, post]);
+
   // Get current page URL
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   const postTitle = post?.title || '';
@@ -246,7 +261,7 @@ const BlogPost = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D]">
+    <div className="min-h-screen bg-[#0D0D0D] scroll-smooth">
       <Header />
       <main className="container mx-auto px-6 py-12 flex flex-col lg:flex-row gap-8">
         {/* Table of Contents Sidebar */}
