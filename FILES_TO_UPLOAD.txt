@@ -1,0 +1,77 @@
+═══════════════════════════════════════════════════════════
+  CYBAEM TECH - FILES TO UPLOAD TO CPANEL
+═══════════════════════════════════════════════════════════
+
+📁 BACKEND FILES (Upload to: public_html/backend/)
+───────────────────────────────────────────────────────────
+1. backend/config/database.php
+2. backend/api/public-blogs.php
+3. backend/api/auth.php
+4. backend/setup.php (for creating admin user)
+5. backend/.env (rename .env.cpanel to .env first)
+
+💡 IMPORTANT: Make sure .env file contains:
+   DB_HOST=82.25.105.94
+   DB_NAME=cybaemtech_CYB_db
+   DB_USER=cybaemtech_CYB_db
+   DB_PASSWORD=Cybaem@2025
+   DB_PORT=3306
+
+───────────────────────────────────────────────────────────
+
+📁 FRONTEND FILES (Upload to: public_html/)
+───────────────────────────────────────────────────────────
+Upload ENTIRE "dist" folder contents:
+- dist/index.html
+- dist/assets/* (ALL files in assets folder)
+
+Total files: ~40+ files including all images and JavaScript
+
+⚠️ IMPORTANT: Replace ALL existing files in public_html
+
+───────────────────────────────────────────────────────────
+
+🔐 ADMIN USER SETUP (After uploading backend)
+───────────────────────────────────────────────────────────
+Choose ONE method:
+
+METHOD 1 (EASIEST): Automatic Setup
+1. Visit: https://www.cybaemtech.com/backend/setup.php
+2. Follow on-screen instructions
+3. DELETE setup.php after completion
+
+METHOD 2: Manual SQL
+1. Login to cPanel → phpMyAdmin
+2. Select database: cybaemtech_CYB_db
+3. Run the SQL from: backend/setup_admin.sql
+
+───────────────────────────────────────────────────────────
+
+🎯 DEFAULT LOGIN CREDENTIALS
+───────────────────────────────────────────────────────────
+URL: https://www.cybaemtech.com/admin
+Username: admin
+Password: admin123
+
+⚠️ CHANGE PASSWORD AFTER FIRST LOGIN!
+
+───────────────────────────────────────────────────────────
+
+✅ AFTER UPLOAD - TEST THESE:
+───────────────────────────────────────────────────────────
+1. Login to admin panel (should work, no 401 error)
+2. Publish a blog post
+3. Visit resources page - blog should appear
+4. Post a comment - should work
+5. Check browser console - no errors
+
+───────────────────────────────────────────────────────────
+
+📚 DETAILED GUIDES AVAILABLE:
+───────────────────────────────────────────────────────────
+- QUICK_FIX_401_ERROR.md (2-minute fix)
+- COMPLETE_DEPLOYMENT_GUIDE.md (full guide with troubleshooting)
+- ADMIN_SETUP_INSTRUCTIONS.md (admin user setup details)
+- CPANEL_COMPLETE_FIX.md (technical details)
+
+═══════════════════════════════════════════════════════════
